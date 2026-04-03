@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Angebot &amp; Nachfrage</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #C7A359; --blue: #6995B7; --navy: #293C4B;
+      --text: #1a1a1a; --text-muted: #5a6a75;
+      --bg: #eef2f5; --surface: #ffffff;
+      --border: rgba(41,60,75,0.12); --radius: 14px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --text: #eef2f5; --text-muted: #8fa4b4; --bg: #151d24; --surface: #1e2b35; --border: rgba(105,149,183,0.18); }
+    }
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; min-height: 100vh; padding-bottom: 3rem; }
+    header { background: #293C4B; padding: 1.4rem 1.25rem 1.1rem; text-align: center; }
+    header h1 { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+    header p  { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+    .page { max-width: 540px; margin: 0 auto; padding: 1.25rem; }
+
+    .toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.1rem; }
+    .toggle-box { border-radius: var(--radius); border: 1.5px solid var(--border); padding: 12px 14px; cursor: pointer; user-select: none; background: var(--surface); transition: background 0.15s, border-color 0.15s; }
+    .toggle-box:hover { border-color: rgba(41,60,75,0.3); }
+    .toggle-box.on-tax { border-color: #7a4f9e; background: rgba(122,79,158,0.08); }
+    .toggle-box.on-wf  { border-color: #c0392b; background: rgba(192,57,43,0.07); }
+    .toggle-icon  { font-size: 18px; margin-bottom: 5px; }
+    .toggle-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .toggle-sub   { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+    .toggle-box.on-tax .toggle-title { color: #7a4f9e; }
+    .toggle-box.on-wf  .toggle-title { color: #c0392b; }
+
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 1.2rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 12px 12px; }
+    .card-label { font-size: 10px; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; }
+    .card-value  { font-size: 15px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.1; }
+
+    .wf-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-bottom: 1.2rem; }
+    .wf-card { border-radius: var(--radius); padding: 10px 12px; border: 1px solid var(--border); }
+    .wf-lbl  { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+    .wf-val  { font-size: 15px; font-weight: 700; }
+
+    .insight { border-left: 3px solid #6995B7; border-radius: 0 var(--radius) var(--radius) 0; background: rgba(105,149,183,0.10); padding: 13px 15px; font-size: 13.5px; line-height: 1.7; color: var(--text-muted); margin-bottom: 1.2rem; }
+    .insight strong { color: var(--text); font-weight: 600; }
+    .insight em { font-style: italic; }
+
+    .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 14px 12px; margin-bottom: 1.2rem; }
+    .chart-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+    .legend { display: flex; gap: 14px; margin-top: 12px; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; }
+    .li { display: flex; align-items: center; gap: 5px; }
+    .ld-line { width: 20px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+    .ld-box  { width: 14px; height: 12px; border-radius: 2px; flex-shrink: 0; opacity: 0.55; }
+
+    .controls { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 16px; display: flex; flex-direction: column; gap: 22px; }
+    .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #293C4B; padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: -4px; }
+    @media (prefers-color-scheme: dark) { .section-title { color: #6995B7; } }
+    .ctrl-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+    .ctrl-label  { font-size: 14px; color: var(--text-muted); }
+    .ctrl-value  { font-size: 15px; font-weight: 700; }
+    .range-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 3px; background: rgba(41,60,75,0.15); outline: none; cursor: pointer; }
+    input[type=range].n::-webkit-slider-thumb { -webkit-appearance:none; width:26px; height:26px; border-radius:50%; background:#6995B7; cursor:pointer; }
+    input[type=range].n::-moz-range-thumb     { width:26px; height:26px; border-radius:50%; background:#6995B7; cursor:pointer; border:none; }
+    input[type=range].a::-webkit-slider-thumb { -webkit-appearance:none; width:26px; height:26px; border-radius:50%; background:#C7A359; cursor:pointer; }
+    input[type=range].a::-moz-range-thumb     { width:26px; height:26px; border-radius:50%; background:#C7A359; cursor:pointer; border:none; }
+    input[type=range].t::-webkit-slider-thumb { -webkit-appearance:none; width:26px; height:26px; border-radius:50%; background:#7a4f9e; cursor:pointer; }
+    input[type=range].t::-moz-range-thumb     { width:26px; height:26px; border-radius:50%; background:#7a4f9e; cursor:pointer; border:none; }
+
+    footer { text-align: center; font-size: 11.5px; color: var(--text-muted); margin-top: 2rem; padding: 0 1.25rem; line-height: 1.7; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Angebot &amp; Nachfrage</h1>
+  <p>Verschiebe die Kurven und analysiere Markteffekte</p>
+</header>
+
+<div class="page">
+
+  <div class="toggles">
+    <div class="toggle-box" id="box-tax" onclick="toggle('tax')">
+      <div class="toggle-icon">🏛</div>
+      <div class="toggle-title">Steuer</div>
+      <div class="toggle-sub">Zeigt den Effekt einer Mengensteuer auf Preis und Menge</div>
+    </div>
+    <div class="toggle-box" id="box-wf" onclick="toggle('wf')">
+      <div class="toggle-icon">⚖️</div>
+      <div class="toggle-title">Wohlfahrt</div>
+      <div class="toggle-sub">Zeigt Konsumenten- und Produzentenrente sowie Wohlfahrtsverlust</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="card-label">Gleichgewichtspreis</div><div class="card-value" id="cP">—</div></div>
+    <div class="card"><div class="card-label">Gleichgewichtsmenge</div><div class="card-value" id="cQ">—</div></div>
+    <div class="card"><div class="card-label">Marktzustand</div><div class="card-value" id="cS" style="font-size:12px;padding-top:3px;">—</div></div>
+  </div>
+
+  <div id="wf-section" style="display:none;">
+    <div class="wf-grid">
+      <div class="wf-card" style="background:rgba(105,149,183,0.12);">
+        <div class="wf-lbl" style="color:#6995B7;">Konsumentenrente</div>
+        <div class="wf-val" id="wCS" style="color:#6995B7;">—</div>
+      </div>
+      <div class="wf-card" style="background:rgba(199,163,89,0.12);">
+        <div class="wf-lbl" style="color:#C7A359;">Produzentenrente</div>
+        <div class="wf-val" id="wPS" style="color:#C7A359;">—</div>
+      </div>
+      <div id="wTaxCard" class="wf-card" style="background:rgba(122,79,158,0.10);display:none;">
+        <div class="wf-lbl" style="color:#7a4f9e;">Steuereinnahmen</div>
+        <div class="wf-val" id="wTR" style="color:#7a4f9e;">—</div>
+      </div>
+      <div id="wDWLCard" class="wf-card" style="background:rgba(192,57,43,0.08);display:none;">
+        <div class="wf-lbl" style="color:#c0392b;">Wohlfahrtsverlust</div>
+        <div class="wf-val" id="wDWL" style="color:#c0392b;">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight" id="insight"></div>
+
+  <div class="chart-wrap">
+    <div class="chart-title">Angebot &amp; Nachfrage — Diagramm</div>
+    <svg id="diagram" width="100%" viewBox="0 0 460 360" style="display:block;"></svg>
+    <div class="legend" id="legend-area"></div>
+  </div>
+
+  <div class="controls">
+    <div class="section-title">Nachfragekurve</div>
+    <div>
+      <div class="ctrl-header">
+        <span class="ctrl-label">Nachfrage</span>
+        <span class="ctrl-value" id="vN" style="color:#6995B7">Ausgangslage</span>
+      </div>
+      <input type="range" class="n" id="sN" min="-3" max="3" step="1" value="0" oninput="update()">
+      <div class="range-labels"><span>← sinkt</span><span>steigt →</span></div>
+    </div>
+
+    <div class="section-title">Angebotskurve</div>
+    <div>
+      <div class="ctrl-header">
+        <span class="ctrl-label">Angebot</span>
+        <span class="ctrl-value" id="vA" style="color:#C7A359">Ausgangslage</span>
+      </div>
+      <input type="range" class="a" id="sA" min="-3" max="3" step="1" value="0" oninput="update()">
+      <div class="range-labels"><span>← sinkt</span><span>steigt →</span></div>
+    </div>
+
+    <div id="tax-ctrl" style="display:none;">
+      <div class="section-title" style="color:#7a4f9e;">Steuer</div>
+      <div>
+        <div class="ctrl-header">
+          <span class="ctrl-label">Steuerbetrag pro Einheit</span>
+          <span class="ctrl-value" id="vT" style="color:#7a4f9e">0 €</span>
+        </div>
+        <input type="range" class="t" id="sT" min="0" max="4" step="0.5" value="0" oninput="update()">
+        <div class="range-labels"><span>keine Steuer</span><span>hohe Steuer →</span></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Dieses Modell dient der Veranschaulichung des Marktgleichgewichts.<br>
+    Vereinfachtes Modell — reale Märkte können von diesen Darstellungen abweichen.
+  </footer>
+</div>
+
+<script>
+  const NS='http://www.w3.org/2000/svg';
+  const PAD={l:62,r:30,t:30,b:54};
+  const VW=460, VH=360;
+  const PW=VW-PAD.l-PAD.r, PH=VH-PAD.t-PAD.b;
+  const QMAX=10, PMAX=10;
+  let showTax=false, showWf=false;
+
+  function sx(q){return PAD.l+(q/QMAX)*PW;}
+  function sy(p){return PAD.t+PH-(p/PMAX)*PH;}
+  function el(tag,attrs,text){
+    const e=document.createElementNS(NS,tag);
+    for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);
+    if(text!==undefined)e.textContent=text;
+    return e;
+  }
+  function axArrow(id,col){
+    const m=el('marker',{id,markerWidth:'9',markerHeight:'6',refX:'8',refY:'3',orient:'auto'});
+    m.appendChild(el('polygon',{points:'0 0,9 3,0 6',fill:col}));
+    return m;
+  }
+  function pts(arr){return arr.map(([q,p])=>sx(q)+','+sy(p)).join(' ');}
+
+  const nMap={'-3':'stark gesunken','-2':'gesunken','-1':'leicht gesunken','0':'Ausgangslage','1':'leicht gestiegen','2':'gestiegen','3':'stark gestiegen'};
+  function dLine(sh){const b=8.5+sh*1.3,m=-1.5;return{b,m,q0:0,p0:b,q1:Math.min(QMAX,-b/m),p1:0};}
+  function sLine(sh){const b=0.5-sh*1.3,m=1.4,q0=Math.max(0,-b/m);return{b,m,q0,p0:b+m*q0,q1:QMAX,p1:b+m*QMAX};}
+  function calcEq(d,s){const q=(s.b-d.b)/(d.m-s.m),p=d.b+d.m*q;return{q:Math.max(0.5,Math.min(QMAX-0.5,q)),p:Math.max(0.5,Math.min(PMAX-0.5,p))};}
+
+  function toggle(which){
+    if(which==='tax') showTax=!showTax;
+    if(which==='wf')  showWf=!showWf;
+    document.getElementById('box-tax').className='toggle-box'+(showTax?' on-tax':'');
+    document.getElementById('box-wf').className='toggle-box'+(showWf?' on-wf':'');
+    document.getElementById('tax-ctrl').style.display=(showTax||showWf)?'':'none';
+    document.getElementById('wf-section').style.display=showWf?'':'none';
+    update();
+  }
+
+  function drawGG(svg,e,col,sub){
+    svg.appendChild(el('line',{x1:sx(e.q),y1:sy(e.p),x2:sx(e.q),y2:PAD.t+PH,stroke:col,'stroke-width':'1.3','stroke-dasharray':'5,3',opacity:'0.65'}));
+    svg.appendChild(el('line',{x1:PAD.l,y1:sy(e.p),x2:sx(e.q),y2:sy(e.p),stroke:col,'stroke-width':'1.3','stroke-dasharray':'5,3',opacity:'0.65'}));
+    svg.appendChild(el('text',{x:PAD.l-7,y:sy(e.p)+1,'font-size':'12','font-weight':'700',fill:col,'text-anchor':'end','dominant-baseline':'middle'},'P'+sub));
+    svg.appendChild(el('text',{x:sx(e.q),y:PAD.t+PH+20,'font-size':'12','font-weight':'700',fill:col,'text-anchor':'middle'},'Q'+sub));
+    svg.appendChild(el('circle',{cx:sx(e.q),cy:sy(e.p),r:'10',fill:'none',stroke:col,'stroke-width':'1.2',opacity:'0.25'}));
+    svg.appendChild(el('circle',{cx:sx(e.q),cy:sy(e.p),r:'6',fill:col}));
+    svg.appendChild(el('text',{x:sx(e.q)+14,y:sy(e.p)-10,'font-size':'12','font-weight':'700',fill:col},'GG'));
+  }
+
+  function draw(nS,aS,tax){
+    const svg=document.getElementById('diagram');
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    const dark=matchMedia('(prefers-color-scheme: dark)').matches;
+    const axCol=dark?'#aec5d4':'#293C4B';
+    const gridC=dark?'rgba(255,255,255,0.07)':'rgba(41,60,75,0.08)';
+    const tickC=dark?'#7a9eb4':'#5a6a75';
+    const ggCol=dark?'#aec5d4':'#293C4B';
+
+    const defs=el('defs',{});
+    defs.appendChild(axArrow('ax-r',axCol));
+    svg.appendChild(defs);
+
+    for(let q=2;q<=QMAX;q+=2)
+      svg.appendChild(el('line',{x1:sx(q),y1:PAD.t,x2:sx(q),y2:PAD.t+PH,stroke:gridC,'stroke-width':'1'}));
+    for(let p=2;p<=PMAX;p+=2)
+      svg.appendChild(el('line',{x1:PAD.l,y1:sy(p),x2:PAD.l+PW,y2:sy(p),stroke:gridC,'stroke-width':'1'}));
+    svg.appendChild(el('line',{x1:PAD.l,y1:PAD.t+PH,x2:PAD.l+PW+10,y2:PAD.t+PH,stroke:axCol,'stroke-width':'2','marker-end':'url(#ax-r)'}));
+    svg.appendChild(el('line',{x1:PAD.l,y1:PAD.t+PH,x2:PAD.l,y2:PAD.t-10,stroke:axCol,'stroke-width':'2','marker-end':'url(#ax-r)'}));
+    svg.appendChild(el('text',{x:PAD.l+PW+16,y:PAD.t+PH+6,'font-size':'16','font-weight':'700',fill:axCol,'dominant-baseline':'middle'},'Q'));
+    svg.appendChild(el('text',{x:PAD.l-6,y:PAD.t-18,'font-size':'16','font-weight':'700',fill:axCol,'text-anchor':'middle'},'P'));
+    svg.appendChild(el('text',{x:PAD.l-12,y:PAD.t+PH+6,'font-size':'12',fill:tickC,'text-anchor':'middle','dominant-baseline':'middle'},'0'));
+
+    const d=dLine(nS),s=sLine(aS),eq=calcEq(d,s);
+    const Peq=eq.p,Qeq=eq.q;
+    const sTax={b:s.b+tax,m:s.m,q0:Math.max(0,-(s.b+tax)/s.m)};
+    sTax.p0=sTax.b+sTax.m*sTax.q0; sTax.q1=QMAX; sTax.p1=sTax.b+sTax.m*QMAX;
+    const eqT=calcEq(d,{b:s.b+tax,m:s.m});
+    const Pt=eqT.p,Qt=eqT.q,Ps=Pt-tax;
+    const useTax=(showTax||showWf)&&tax>0;
+
+    if(showWf){
+      if(!useTax){
+        svg.appendChild(el('polygon',{points:pts([[0,d.p0],[Qeq,Peq],[0,Peq]]),fill:'#6995B7',opacity:'0.18'}));
+        const sq0=s.q0,sp0=s.p0;
+        svg.appendChild(el('polygon',{points:pts([[sq0,sp0],[Qeq,Peq],[0,Peq],[0,sp0]]),fill:'#C7A359',opacity:'0.20'}));
+      } else {
+        svg.appendChild(el('polygon',{points:pts([[0,d.p0],[Qt,Pt],[0,Pt]]),fill:'#6995B7',opacity:'0.22'}));
+        const sq0=s.q0,sp0=s.p0;
+        svg.appendChild(el('polygon',{points:pts([[sq0,sp0],[Qt,Ps],[0,Ps],[0,sp0]]),fill:'#C7A359',opacity:'0.20'}));
+        svg.appendChild(el('polygon',{points:pts([[0,Ps],[Qt,Ps],[Qt,Pt],[0,Pt]]),fill:'#7a4f9e',opacity:'0.18'}));
+        svg.appendChild(el('rect',{x:sx(0),y:sy(Pt),width:sx(Qt)-sx(0),height:sy(Ps)-sy(Pt),fill:'none',stroke:'#7a4f9e','stroke-width':'1',opacity:'0.45'}));
+        svg.appendChild(el('polygon',{points:pts([[Qt,Pt],[Qeq,Peq],[Qt,Ps]]),fill:'#c0392b',opacity:'0.35'}));
+      }
+    }
+
+    if(nS!==0||aS!==0){
+      const d0=dLine(0),s0=sLine(0),e0=calcEq(d0,s0);
+      svg.appendChild(el('line',{x1:sx(d0.q0),y1:sy(d0.p0),x2:sx(d0.q1),y2:sy(d0.p1),stroke:'#6995B7','stroke-width':'1.8','stroke-dasharray':'7,4',opacity:'0.28'}));
+      svg.appendChild(el('line',{x1:sx(s0.q0),y1:sy(s0.p0),x2:sx(s0.q1),y2:sy(s0.p1),stroke:'#C7A359','stroke-width':'1.8','stroke-dasharray':'7,4',opacity:'0.28'}));
+      svg.appendChild(el('circle',{cx:sx(e0.q),cy:sy(e0.p),r:'5',fill:'none',stroke:ggCol,'stroke-width':'1.5','stroke-dasharray':'3,2',opacity:'0.30'}));
+      svg.appendChild(el('text',{x:sx(d0.q1)+5,y:sy(d0.p1)+15,'font-size':'12','font-weight':'700',fill:'#6995B7',opacity:'0.38'},'N₀'));
+      svg.appendChild(el('text',{x:sx(s0.q1)+6,y:sy(s0.p1)+2,'font-size':'12','font-weight':'700',fill:'#C7A359',opacity:'0.38'},'A₀'));
+    }
+
+    svg.appendChild(el('line',{x1:sx(d.q0),y1:sy(d.p0),x2:sx(d.q1),y2:sy(d.p1),stroke:'#6995B7','stroke-width':'3'}));
+    svg.appendChild(el('text',{x:sx(d.q1)+5,y:sy(d.p1)+15,'font-size':'14','font-weight':'700',fill:'#6995B7'},(nS!==0&&!showTax&&!showWf)?'N₁':'N'));
+    svg.appendChild(el('line',{x1:sx(s.q0),y1:sy(s.p0),x2:sx(s.q1),y2:sy(s.p1),stroke:'#C7A359','stroke-width':'3'}));
+    svg.appendChild(el('text',{x:sx(s.q1)+6,y:sy(s.p1)+2,'font-size':'14','font-weight':'700',fill:'#C7A359'},(aS!==0&&!showTax&&!showWf)?'A₁':'A'));
+
+    if(useTax){
+      svg.appendChild(el('line',{x1:sx(sTax.q0),y1:sy(sTax.p0),x2:sx(sTax.q1),y2:sy(sTax.p1),stroke:'#7a4f9e','stroke-width':'2.5','stroke-dasharray':'6,3'}));
+      svg.appendChild(el('text',{x:sx(sTax.q1)+6,y:sy(sTax.p1)+2,'font-size':'13','font-weight':'700',fill:'#7a4f9e'},'A+T'));
+      svg.appendChild(el('line',{x1:PAD.l,y1:sy(Pt),x2:sx(Qt),y2:sy(Pt),stroke:'#7a4f9e','stroke-width':'1','stroke-dasharray':'4,3',opacity:'0.7'}));
+      svg.appendChild(el('line',{x1:PAD.l,y1:sy(Ps),x2:sx(Qt),y2:sy(Ps),stroke:'#C7A359','stroke-width':'1','stroke-dasharray':'4,3',opacity:'0.7'}));
+      svg.appendChild(el('line',{x1:sx(Qt),y1:sy(Pt),x2:sx(Qt),y2:PAD.t+PH,stroke:ggCol,'stroke-width':'1.2','stroke-dasharray':'5,3',opacity:'0.6'}));
+      svg.appendChild(el('text',{x:PAD.l-7,y:sy(Pt)+1,'font-size':'11','font-weight':'700',fill:'#7a4f9e','text-anchor':'end','dominant-baseline':'middle'},'Pk'));
+      svg.appendChild(el('text',{x:PAD.l-7,y:sy(Ps)+1,'font-size':'11','font-weight':'700',fill:'#C7A359','text-anchor':'end','dominant-baseline':'middle'},'Pp'));
+      svg.appendChild(el('text',{x:sx(Qt),y:PAD.t+PH+20,'font-size':'11','font-weight':'700',fill:ggCol,'text-anchor':'middle'},'Qt'));
+      const midY=(sy(Pt)+sy(Ps))/2;
+      svg.appendChild(el('line',{x1:sx(Qt)+22,y1:sy(Pt),x2:sx(Qt)+22,y2:sy(Ps),stroke:'#7a4f9e','stroke-width':'1.5'}));
+      svg.appendChild(el('text',{x:sx(Qt)+30,y:midY,'font-size':'10','font-weight':'700',fill:'#7a4f9e','dominant-baseline':'middle'},'T'));
+      drawGG(svg,eqT,ggCol,'*');
+    } else {
+      drawGG(svg,eq,ggCol,(nS===0&&aS===0)?'₀':'*');
+    }
+  }
+
+  function updateLegend(tax){
+    const lg=document.getElementById('legend-area');
+    lg.innerHTML='';
+    const addLine=(col,label,dashed)=>{
+      const li=document.createElement('div'); li.className='li';
+      const ld=document.createElement('div'); ld.className='ld-line';
+      if(dashed){ld.style.cssText=`width:20px;height:0;border-top:2px dashed ${col};flex-shrink:0;`;}
+      else {ld.style.background=col;}
+      li.appendChild(ld);
+      const sp=document.createElement('span'); sp.textContent=label; li.appendChild(sp);
+      lg.appendChild(li);
+    };
+    const addBox=(col,label)=>{
+      const li=document.createElement('div'); li.className='li';
+      const ld=document.createElement('div'); ld.className='ld-box'; ld.style.background=col;
+      li.appendChild(ld);
+      const sp=document.createElement('span'); sp.textContent=label; li.appendChild(sp);
+      lg.appendChild(li);
+    };
+    addLine('#6995B7','Nachfrage (N)');
+    addLine('#C7A359','Angebot (A)');
+    if((showTax||showWf)&&tax>0) addLine('#7a4f9e','Angebot + Steuer (A+T)',true);
+    if(showWf){
+      addBox('#6995B7','Konsumentenrente');
+      addBox('#C7A359','Produzentenrente');
+      if(tax>0){addBox('#7a4f9e','Steuereinnahmen');addBox('#c0392b','Wohlfahrtsverlust (DWL)');}
+    }
+  }
+
+  function update(){
+    const nS=+document.getElementById('sN').value;
+    const aS=+document.getElementById('sA').value;
+    const tax=+document.getElementById('sT').value;
+    document.getElementById('vN').textContent=nMap[nS];
+    document.getElementById('vA').textContent=nMap[aS];
+    document.getElementById('vT').textContent=tax.toFixed(1).replace('.',',')+' €';
+
+    const d=dLine(nS),s=sLine(aS),eq=calcEq(d,s);
+    const eqT=calcEq(d,{b:s.b+tax,m:s.m});
+    const Pt=eqT.p,Qt=eqT.q,Ps=Pt-tax;
+    const Peq=eq.p,Qeq=eq.q;
+    const useTax=(showTax||showWf)&&tax>0;
+    const dispP=useTax?Pt:Peq, dispQ=useTax?Qt:Qeq;
+
+    const dark=matchMedia('(prefers-color-scheme: dark)').matches;
+    const ggDisplay=dark?'#aec5d4':'#293C4B';
+    document.getElementById('cP').style.color=ggDisplay;
+    document.getElementById('cQ').style.color=ggDisplay;
+    document.getElementById('cP').textContent=Math.round(dispP*10)+' €';
+    document.getElementById('cQ').textContent=Math.round(dispQ*10)+' Stk.';
+
+    if(showWf){
+      const CS=0.5*(d.p0-Peq)*Qeq, PS=0.5*(Peq-Math.max(0,s.b))*Qeq;
+      let CSt=CS,PSt=PS,TR=0,DWL=0;
+      if(useTax){ CSt=0.5*(d.p0-Pt)*Qt; PSt=0.5*(Ps-Math.max(0,s.b))*Qt; TR=tax*Qt; DWL=0.5*tax*(Qeq-Qt); }
+      const f=v=>Math.round(v*100)+' €²';
+      document.getElementById('wCS').textContent=f(CSt);
+      document.getElementById('wPS').textContent=f(PSt);
+      document.getElementById('wTR').textContent=f(TR);
+      document.getElementById('wDWL').textContent=DWL>0?('− '+f(DWL)):'0 €²';
+      document.getElementById('wTaxCard').style.display=useTax?'':'none';
+      document.getElementById('wDWLCard').style.display=useTax?'':'none';
+    }
+
+    let state,stateColor,insight;
+    if(!showTax&&!showWf){
+      if(nS===0&&aS===0){
+        state='Gleichgewicht'; stateColor=ggDisplay;
+        insight=`Ausgangsgleichgewicht: Bei <strong>P₀ = ${Math.round(Peq*10)} €</strong> und <strong>Q₀ = ${Math.round(Qeq*10)} Stk.</strong> stimmen Angebot und Nachfrage exakt überein.`;
+      } else {
+        const d0=dLine(0),s0=sLine(0),eq0=calcEq(d0,s0);
+        const dp=Math.round(Peq*10)-Math.round(eq0.p*10), dq=Math.round(Qeq*10)-Math.round(eq0.q*10);
+        let cause='';
+        if(nS>0&&aS===0) cause='Nachfragekurve nach <strong>rechts</strong> — z.B. steigende Einkommen.';
+        else if(nS<0&&aS===0) cause='Nachfragekurve nach <strong>links</strong> — z.B. sinkende Kaufkraft.';
+        else if(aS>0&&nS===0) cause='Angebotskurve nach <strong>rechts</strong> — z.B. sinkende Kosten.';
+        else if(aS<0&&nS===0) cause='Angebotskurve nach <strong>links</strong> — z.B. steigende Rohstoffpreise.';
+        else cause='Beide Kurven verschieben sich gleichzeitig.';
+        state='Neues Gleichgewicht'; stateColor=nS!==0?'#6995B7':'#C7A359';
+        insight=`${cause}<br>Neues Gleichgewicht: <strong>P* = ${Math.round(Peq*10)} €</strong> (${dp>=0?'↑':'↓'} ${Math.abs(dp)} €) · <strong>Q* = ${Math.round(Qeq*10)} Stk.</strong>`;
+      }
+    } else if(showTax&&!showWf){
+      state=tax>0?'Mit Steuer':'Steuer aktiv'; stateColor='#7a4f9e';
+      insight=tax===0
+        ?`Regler aktivieren: Eine Mengensteuer verschiebt die Angebotskurve nach oben (A → A+T) und erzeugt einen Keil zwischen Käufer- und Verkäuferpreis.`
+        :`Steuer <strong>${tax.toFixed(1)} €/Einheit</strong>: Käufer zahlen <strong>Pk = ${Math.round(Pt*10)} €</strong>, Verkäufer erhalten <strong>Pp = ${Math.round(Ps*10)} €</strong>. Gehandelte Menge sinkt auf <strong>Qt = ${Math.round(Qt*10)} Stk.</strong>`;
+    } else {
+      state=useTax?'Wohlfahrtsverlust sichtbar':'Wohlfahrt aktiv'; stateColor=useTax?'#c0392b':'#6995B7';
+      insight=!useTax
+        ?`Blau = <strong>Konsumentenrente</strong> (Zahlungsbereitschaft über dem Marktpreis). Gold = <strong>Produzentenrente</strong> (Erlös über den Grenzkosten). Steuer aktivieren, um den Wohlfahrtsverlust zu visualisieren.`
+        :`Die Steuer erzeugt einen <strong>Wohlfahrtsverlust (DWL)</strong> — rot markiert. Es handelt sich um Transaktionen, die ohne Steuer zustande kämen, nun aber ausbleiben. Dieser Verlust trifft Konsumenten <em>und</em> Produzenten.`;
+    }
+    document.getElementById('cS').textContent=state;
+    document.getElementById('cS').style.color=stateColor;
+    document.getElementById('insight').innerHTML=insight;
+    updateLegend(tax);
+    draw(nS,aS,tax);
+  }
+
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',update);
+  update();
+</script>
+
+</body>
+</html>
